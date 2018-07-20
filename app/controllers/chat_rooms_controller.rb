@@ -1,5 +1,6 @@
 class ChatRoomsController < ApplicationController
-  before_action :set_chat_room, only: [:show, :edit, :update, :destroy]
+  before_action :set_chat_room, only: [:show, :edit, :update, :destroy, :join,
+     :chat, :exit]
 
   # GET /chat_rooms
   # GET /chat_rooms.json
@@ -25,9 +26,10 @@ class ChatRoomsController < ApplicationController
   # POST /chat_rooms.json
   def create
     @chat_room = ChatRoom.new(chat_room_params)
-
+    @chat_room.master_id = current_user.email
     respond_to do |format|
       if @chat_room.save
+        Admission.create(user_id: current_user.id,chat_room_id: @chat_room.id)
         format.html { redirect_to @chat_room, notice: 'Chat room was successfully created.' }
         format.json { render :show, status: :created, location: @chat_room }
       else
@@ -60,7 +62,25 @@ class ChatRoomsController < ApplicationController
       format.json { head :no_content }
     end
   end
-
+  def join
+    unless current_user.join_room?(@chat_room)
+    Admission.create(user_id: current_user.id,chat_room_id: params[:id])
+  else
+    render js: "alert('이미 참여한 방입니다.')"
+  end
+  end
+  def chat
+    # @chat_room -> chat
+    @chat_room.chats.create(user_id: current_user.id,message:params[:message])
+  end
+  def exit
+    if current_user.email == @chat_room.master_id
+      @chat_room.destroy
+    else
+      admission=Admission.where(user_id: current_user.id, chat_room_id: @chat_room.id)
+      admission[0].destroy
+  end
+  end
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_chat_room

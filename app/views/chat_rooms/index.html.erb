@@ -13,13 +13,12 @@
     </tr>
   </thead>
 
-  <tbody>
+  <tbody class = "chat_room_list">
     <% @chat_rooms.each do |chat_room| %>
       <tr>
         <td><%= chat_room.title %></td>
         <td><%= chat_room.master_id %></td>
-        <td><%= chat_room.max_count %></td>
-        <td><%= chat_room.admission_count %></td>
+        <td><%= chat_room.max_count %>/<%= chat_room.admissions_count %></td>
         <td><%= link_to 'Show', chat_room %></td>
         <td><%= link_to 'Edit', edit_chat_room_path(chat_room) %></td>
         <td><%= link_to 'Destroy', chat_room, method: :delete, data: { confirm: 'Are you sure?' } %></td>
@@ -31,3 +30,36 @@
 <br>
 
 <%= link_to 'New Chat room', new_chat_room_path %>
+
+<script>
+
+
+$(document).on('ready',function(){
+var pusher = new Pusher("<%=ENV['pusher_key']%>", {
+   cluster: "<%=ENV['pusher_cluster']%>",
+   encrypted: true
+ });
+
+var channel = pusher.subscribe('chat_room');
+channel.bind('create', function(data) {
+  $('.chat_room_list')
+
+});
+
+  channel.bind('create', function(data) {
+    console.log("만들어졋니?");
+    room_created(data);
+  });
+  channel.bind('join', function(data) {
+    console.log("참여했니?");
+  });
+  channel.bind('exit', function(data) {
+    console.log("나가겠니?");
+    room_exit(data);
+  });
+  channel.bind('destroy', function(data) {
+    console.log("방을 없에겠니??");
+    room_destroy(data);
+  });
+});
+</script>

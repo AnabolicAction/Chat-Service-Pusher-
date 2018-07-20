@@ -1,24 +1,90 @@
 <p id="notice"><%= notice %></p>
 
 <p>
-  <strong>Title:</strong>
+  <strong>방제:</strong>
   <%= @chat_room.title %>
 </p>
 
 <p>
-  <strong>Master:</strong>
+  <strong>방장:</strong>
   <%= @chat_room.master_id %>
 </p>
-
 <p>
-  <strong>Max count:</strong>
-  <%= @chat_room.max_count %>
+  <strong>인원:</strong>
+  <%= @chat_room.admissions_count %>/<%= @chat_room.max_count %>
 </p>
+<hr/>
+<p class="user-list"><strong>참여 인원:</strong></p>
+  <% @chat_room.users.each do |user| %>
+  <p id = "user-<%user.id%>"><%=user.email%></p>
+<%end%>
+<hr/>
 
-<p>
-  <strong>Admission count:</strong>
-  <%= @chat_room.admission_count %>
-</p>
+<%if current_user.join_room?@chat_room%>
+<div class = "chat-list">
+<%@chat_room.chats.each do |chat|%>
+  <p><%=chat.user.email%> : <%=chat.message%></p>
+  <%end%>
+  </div>
+  <hr/>
+  <%=form_tag(chat_chat_room_path(@chat_room),remote: true) do%>
+    <%=text_field_tag :message %>
+  <%end%>
+<%end%>
 
+
+<%unless current_user.join_room? @chat_room%>
+<%=link_to '참가하기',join_chat_room_path(@chat_room), remote: true,method: 'post'%>
+<%else%>
+<%=link_to '방나가기',exit_chat_room_path(@chat_room), remote: true,method: 'delete', data: {confirm: '방나갈거니?'}%>
+<%end%>
 <%= link_to 'Edit', edit_chat_room_path(@chat_room) %> |
 <%= link_to 'Back', chat_rooms_path %>
+
+
+<script>
+$(document).on('ready',function(){
+  function user_join(data){
+    $('.user-list').append(`<p>${data.email}</p>`)
+  }
+  function user_chat(data){
+    $('.chat-list').append(`<p>${data.email}: ${data.message}</p>`)
+  }
+  function user_exit(data){
+    $('.chat-list').append(`<p>${data.email}님이 나가셨습니다.</p>`)
+    $(`#user-${data.user_id}`).remove();
+  }
+  function room_destroy(data){
+    alert('방이 삭제되었습니다.!');
+    location.href = '/'
+  }
+
+var pusher = new Pusher("<%=ENV['pusher_key']%>", {
+   cluster: "<%=ENV['pusher_cluster']%>",
+   encrypted: true
+ });
+
+var channel = pusher.subscribe("chat_room_<%=@chat_room.id%>");
+  channel.bind('create', function(data) {
+    console.log("만들어졋니?");
+    room_created(data);
+  });
+  channel.bind('join', function(data) {
+  //지금 들어온 유저를 유저 참여 목록에 추가한다.
+  user_join(data);
+  });
+  channel.bind('chat', function(data) {
+  //지금 들어온 유저를 유저 참여 목록에 추가한다.
+  user_chat(data);
+  });
+  channel.bind('exit', function(data) {
+  //지금 들어온 유저를 유저 참여 목록에 추가한다.
+  user_exit(data);
+  });
+  channel.bind('destroy', function(data) {
+  //지금 들어온 유저를 유저 참여 목록에 추가한다.
+  room_destroy(data);
+  });
+
+});
+</script>
